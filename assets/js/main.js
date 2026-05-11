@@ -59,7 +59,7 @@ container.appendChild(stats.domElement);
 
 const GRAVITY = 30;
 const NUM_PROJECTILES = 100;
-const COLLIDER_RADIUS = 0.2; // Radio de colisión mantenido para físicas
+const COLLIDER_RADIUS = 0.2; // Radio base de colisión para las físicas
 const STEPS_PER_FRAME = 5;
 
 // Geometrías predefinidas
@@ -70,6 +70,7 @@ const pyramidGeometry = new THREE.ConeGeometry(0.25, 0.4, 4);
 const projectiles = [];
 let projectileIdx = 0;
 
+// Inicializamos el "pool" de proyectiles
 for (let i = 0; i < NUM_PROJECTILES; i++) {
     // Instanciamos un material único por proyectil para poder cambiar su color individualmente
     const material = new THREE.MeshLambertMaterial({ color: 0xffffff });
@@ -151,7 +152,7 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-// Lógica de lanzamiento actualizada
+// Lógica de lanzamiento actualizada con escala y colores aleatorios
 function throwProjectile(type) {
     const projectile = projectiles[projectileIdx];
 
@@ -160,6 +161,16 @@ function throwProjectile(type) {
     
     // Asignar color aleatorio
     projectile.mesh.material.color.setHex(Math.random() * 0xffffff);
+
+    // Generar un factor de escala aleatorio (entre 0.5x y 1.5x)
+    const randomScale = 0.5 + Math.random(); 
+    
+    // Aplicar la escala al modelo 3D visual
+    projectile.mesh.scale.set(randomScale, randomScale, randomScale);
+
+    // Escalar también el radio de la esfera delimitadora (bounding sphere) 
+    // para que las físicas de rebote y colisión sigan siendo precisas.
+    projectile.collider.radius = COLLIDER_RADIUS * randomScale;
 
     camera.getWorldDirection(playerDirection);
 
@@ -172,6 +183,7 @@ function throwProjectile(type) {
     projectile.velocity.copy(playerDirection).multiplyScalar(impulse);
     projectile.velocity.addScaledVector(playerVelocity, 2);
 
+    // Avanzamos al siguiente proyectil en el pool (y volvemos a 0 si llegamos al final)
     projectileIdx = (projectileIdx + 1) % projectiles.length;
 }
 
@@ -295,7 +307,7 @@ function updateProjectiles(deltaTime) {
     for (const projectile of projectiles) {
         projectile.mesh.position.copy(projectile.collider.center);
         
-        // Efecto opcional: rotar ligeramente los objetos mientras vuelan para mayor dinamismo
+        // Rotar ligeramente los objetos mientras vuelan para mayor dinamismo
         if(projectile.velocity.lengthSq() > 0.1) {
              projectile.mesh.rotation.x += deltaTime * projectile.velocity.y;
              projectile.mesh.rotation.y += deltaTime * projectile.velocity.x;
